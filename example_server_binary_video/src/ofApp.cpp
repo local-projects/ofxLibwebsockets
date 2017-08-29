@@ -6,11 +6,6 @@ void ofApp::setup(){
     // - pass in true after port to set up with SSL
     //bool connected = server.setup( 9092 );
     
-    // Uncomment this to set up a server with a protocol
-    // Right now, clients created via libwebsockets that are connecting to servers
-    // made via libwebsockets seem to want a protocol. Hopefully this gets fixed, 
-    // but until now you have to do something like this:
-    
     //setup video grabber
     video.listDevices();
     bVideoSetup = video.initGrabber( 320, 240 );
@@ -23,7 +18,7 @@ void ofApp::setup(){
     server.addListener(this);
     
     // setup message queue
-    font.loadFont("myriad.ttf", 20);
+    font.load("myriad.ttf", 20);
     messages.push_back("WebSocket server setup at "+ofToString( server.getPort() ) + ( server.usingSSL() ? " with SSL" : " without SSL") );
     
     ofBackground(0);
@@ -35,7 +30,6 @@ void ofApp::update(){
     video.update();
     if ( bVideoSetup && video.isFrameNew() ){
         server.sendBinary( video );
-        //messages.push_back( "Sending image" );
     }
 }
 
@@ -63,7 +57,7 @@ void ofApp::onOpen( ofxLibwebsockets::Event& args ){
     messages.push_back("New connection from " + args.conn.getClientIP() );
     
     // send video data
-    args.conn.send( ofToString(video.width) +":"+ ofToString( video.height ) +":"+ ofToString( 1 ) );
+    args.conn.send( ofToString(video.getWidth()) +":"+ ofToString( video.getHeight() ) +":"+ ofToString( 1 ) );
 }
 
 //--------------------------------------------------------------

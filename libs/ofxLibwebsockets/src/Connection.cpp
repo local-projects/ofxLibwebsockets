@@ -84,8 +84,8 @@ namespace ofxLibwebsockets {
     }
     
     //--------------------------------------------------------------
-    void Connection::sendBinary( ofBuffer buffer ){
-        sendBinary(buffer.getBinaryBuffer(), buffer.size());
+    void Connection::sendBinary( ofBuffer & buffer ){
+        sendBinary(buffer.getData(), buffer.size());
     }
     
     //--------------------------------------------------------------

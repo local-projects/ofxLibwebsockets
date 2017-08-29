@@ -13,10 +13,24 @@
 
 namespace ofxLibwebsockets {
 
+	ServerOptions defaultServerOptions(){
+        ServerOptions opts;
+        opts.port           = 80;
+        opts.protocol       = "NULL"; // NULL == no protocol. most websockets behave this way.
+        opts.bUseSSL        = false;
+        opts.sslCertPath    = ofToDataPath("ssl/libwebsockets-test-server.pem", true);
+        opts.sslKeyPath     = ofToDataPath("ssl/libwebsockets-test-server.key.pem", true);
+        opts.documentRoot   = ofToDataPath("web", true);
+        opts.ka_time        = 0;
+        opts.ka_probes      = 0;
+        opts.ka_interval    = 0;
+        return opts;
+    }
+
     //--------------------------------------------------------------
     Server::Server(){
         context = NULL;
-        waitMillis = 50;
+        waitMillis = 1;
         reactors.push_back(this);
         
         defaultOptions = defaultServerOptions();
@@ -127,17 +141,14 @@ namespace ofxLibwebsockets {
     
     //--------------------------------------------------------------
 	void Server::close() {
-		waitForThread(true);
+        if (isThreadRunning()){
+            // this is the strategy from ofxKinect
+            stopThread();
+            ofSleepMillis(10);
+            waitForThread(false);
+        }
 		libwebsocket_context_destroy(context);
 	}
-
-    //--------------------------------------------------------------
-    void Server::broadcast( string message ){
-        // loop through all protocols and broadcast!
-        for (int i=0; i<protocols.size(); i++){
-            protocols[i].second->broadcast( message );
-        }
-    }
     
     //--------------------------------------------------------------
     void Server::send( string message ){
@@ -149,8 +160,8 @@ namespace ofxLibwebsockets {
     }
     
     //--------------------------------------------------------------
-    void Server::sendBinary( ofBuffer buffer ){
-        sendBinary(buffer.getBinaryBuffer(), buffer.size());
+    void Server::sendBinary( ofBuffer & buffer ){
+        sendBinary(buffer.getData(), buffer.size());
     }
     
     //--------------------------------------------------------------
@@ -215,9 +226,13 @@ namespace ofxLibwebsockets {
                     //unlock();
                 }
             }
-            lock();
-            libwebsocket_service(context, waitMillis);
-            unlock();
+            
+            if (lock())
+            {
+                libwebsocket_service(context, waitMillis);
+                unlock();
+            }
+            yield();
         }
     }
 }

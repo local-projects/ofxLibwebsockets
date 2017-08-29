@@ -47,6 +47,8 @@ namespace ofxLibwebsockets {
         
         unsigned int _http(struct libwebsocket *ws, const char* const url);
         
+        void setWaitMillis(int millis);
+        
     protected:
         std::string     document_root;
         unsigned int    waitMillis;
@@ -78,5 +80,5 @@ namespace ofxLibwebsockets {
         
     };
     
-    static vector<Reactor *> reactors;
+    extern vector<Reactor *> reactors;
 };

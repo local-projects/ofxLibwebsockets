@@ -29,6 +29,14 @@ void ofApp::setup(){
 
 //--------------------------------------------------------------
 void ofApp::update(){
+    if ( toDelete.size() > 0 ){
+        for ( auto & i : toDelete ){
+            drawings.erase(i->_id);
+            
+            server.send("{\"erase\":\"" + ofToString( i->_id ) + "\"}" );
+        }
+        toDelete.clear();
+    }
 }
 
 //--------------------------------------------------------------
@@ -96,15 +104,11 @@ void ofApp::onOpen( ofxLibwebsockets::Event& args ){
 void ofApp::onClose( ofxLibwebsockets::Event& args ){
     cout<<"on close"<<endl;
     // remove from color map
-    
-    map<int, Drawing*>::iterator it = drawings.begin();
-    
-    for (it; it != drawings.end(); ++it){
-        Drawing * d = it->second;
+    for ( auto & it : drawings){
+        Drawing * d = it.second;
         if ( *d->conn == args.conn ){
+            toDelete.push_back(it.second);
             d->conn == NULL;
-            server.send("{\"erase\":\"" + ofToString( it->second->_id ) + "\"}" );
-            drawings.erase( it );
         }
     }
 }

@@ -36,16 +36,18 @@ namespace ofxLibwebsockets {
         Connection(Reactor* const _reactor=NULL, Protocol* const _protocol=NULL);
         
         ~Connection();
+        
+        
         void close();
         void send(const std::string& message);
         
         template <class T> 
         void sendBinary( T& image ){
-            int size = image.width * image.height * image.getPixelsRef().getNumChannels();
-            sendBinary( (char *) image.getPixels(), size );
+            int size = image.getWidth() * image.getHeight() * image.getPixels().getNumChannels();
+            sendBinary( (char *) image.getPixels().getData(), size );
         }
         
-        void sendBinary( ofBuffer buffer );
+        void sendBinary( ofBuffer & buffer );
         void sendBinary( unsigned char * data, unsigned int size );
         void sendBinary( char * data, unsigned int size );
         

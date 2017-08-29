@@ -40,19 +40,7 @@ namespace ofxLibwebsockets {
         int     ka_interval;    // how long to wait between probes, in seconds; ignored if ka_time == 0
     };
     
-    static ServerOptions defaultServerOptions(){
-        ServerOptions opts;
-        opts.port           = 80;
-        opts.protocol       = "NULL"; // NULL == no protocol. most websockets behave this way.
-        opts.bUseSSL        = false;
-        opts.sslCertPath    = ofToDataPath("ssl/libwebsockets-test-server.pem", true);
-        opts.sslKeyPath     = ofToDataPath("ssl/libwebsockets-test-server.key.pem", true);
-        opts.documentRoot   = ofToDataPath("web", true);
-        opts.ka_time        = 0;
-        opts.ka_probes      = 0;
-        opts.ka_interval    = 0;
-        return opts;
-    }
+    extern ServerOptions defaultServerOptions();
 
     class Server : public Reactor {
         friend class Protocol;
@@ -71,27 +59,25 @@ namespace ofxLibwebsockets {
         // close the server
         void close();
         
-        // broadcast a message to all connections
-        void broadcast( string message );
-        
-        // send to all connections 
-        // (sends normal message instead of broadcast)
+        // send to all connections
         void send( string message );
         
         // send anything that has pixels to all connections
         template <class T> 
         void sendBinary( T& image ){
+            int size = image.getWidth() * image.getHeight() * image.getPixels().getNumChannels();
+            
             lock();
             for (int i=0; i<connections.size(); i++){
                 if ( connections[i] != NULL ){
-                    connections[i]->sendBinary( image );
+                    connections[i]->sendBinary( (char *) image.getPixels().getData(), size );
                 }
             }
             unlock();
         }
         
         // send any binary data to all connections
-        void sendBinary( ofBuffer buffer );
+        void sendBinary( ofBuffer & buffer );
         void sendBinary( unsigned char * data, int size );
         void sendBinary( char * data, int size );
         
@@ -105,7 +91,6 @@ namespace ofxLibwebsockets {
             ofAddListener( serverProtocol.oncloseEvent, app, &T::onClose);
             ofAddListener( serverProtocol.onidleEvent, app, &T::onIdle);
             ofAddListener( serverProtocol.onmessageEvent, app, &T::onMessage);
-            ofAddListener( serverProtocol.onbroadcastEvent, app, &T::onBroadcast);
         }
         
         template<class T>
@@ -115,7 +100,6 @@ namespace ofxLibwebsockets {
             ofRemoveListener( serverProtocol.oncloseEvent, app, &T::onClose);
             ofRemoveListener( serverProtocol.onidleEvent, app, &T::onIdle);
             ofRemoveListener( serverProtocol.onmessageEvent, app, &T::onMessage);
-            ofRemoveListener( serverProtocol.onbroadcastEvent, app, &T::onBroadcast);
         }
         
         //getters

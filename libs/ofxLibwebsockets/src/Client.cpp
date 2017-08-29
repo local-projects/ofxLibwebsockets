@@ -10,15 +10,37 @@
 
 namespace ofxLibwebsockets {
 
+   ClientOptions defaultClientOptions(){
+       ClientOptions opts;
+       opts.host      = "localhost";
+       opts.port      = 80;
+       opts.bUseSSL   = false;
+       opts.channel   = "/";
+       opts.protocol  = "NULL";
+       opts.version   = -1;     //use latest version
+
+       // Note, turning this on has been seen to cause an EXC_BAD_ACCESS error
+       // when calling libwebsocket_service() in threadedFunction(). If you're
+       // having issues, try raising the reconnect interval, or not using this
+       // reconnect option. Use at your own risk!
+       opts.reconnect = false;
+       opts.reconnectInterval = 1000;
+
+       opts.ka_time      = 0;
+       opts.ka_probes    = 0;
+       opts.ka_interval  = 0;
+       return opts;
+   };
+
     Client::Client(){
         context = NULL;
         connection = NULL;
-        waitMillis = 50;
-        //count_pollfds = 0;
+        waitMillis = 1;
         reactors.push_back(this);
         
         defaultOptions = defaultClientOptions();
-        
+
+        ofAddListener( ofEvents().update, this, &Client::update);
         ofAddListener( clientProtocol.oncloseEvent, this, &Client::onClose);
     }
 
@@ -26,6 +48,7 @@ namespace ofxLibwebsockets {
     //--------------------------------------------------------------
     Client::~Client(){
         exit();
+        ofRemoveListener( ofEvents().update, this, &Client::update);
     }
     
     //--------------------------------------------------------------
@@ -52,7 +75,9 @@ namespace ofxLibwebsockets {
         address = options.host;
         port    = options.port;  
         channel = options.channel;
-        
+        defaultOptions = options;
+        bShouldReconnect = defaultOptions.reconnect;
+
 		/*
 			enum lws_log_levels {
 			LLL_ERR = 1 << 0,
@@ -157,6 +182,9 @@ namespace ofxLibwebsockets {
 
     //--------------------------------------------------------------
     void Client::close(){
+        // Self-initiated call to close() means we shouldn't try to reconnect
+        bShouldReconnect = false;
+
         if (isThreadRunning()){
             waitForThread(true);
         } else {
@@ -185,7 +213,9 @@ namespace ofxLibwebsockets {
 		if ( context != NULL ){
 			closeAndFree = true;
 			lwsconnection = NULL;
-		}     
+		}
+
+		lastReconnectTime = ofGetElapsedTimeMillis();
     }
 
     //--------------------------------------------------------------
@@ -194,17 +224,9 @@ namespace ofxLibwebsockets {
             connection->send( message );
         }
     }
-
-    //--------------------------------------------------------------
-    template <class T>
-    void Client::sendBinary( T& image ){
-        if ( connection != NULL ){
-            connection->sendBinary(image);
-        }
-    }
     
     //--------------------------------------------------------------
-    void Client::sendBinary( ofBuffer buffer ){
+    void Client::sendBinary( ofBuffer & buffer ){
         if ( connection != NULL){
             connection->sendBinary(buffer);
         }
@@ -223,7 +245,18 @@ namespace ofxLibwebsockets {
             connection->sendBinary(data,size);
         }
     }
-    
+
+    //--------------------------------------------------------------
+    void Client::update(ofEventArgs& args) {
+        if (!isConnected() && bShouldReconnect) {
+            uint64_t now = ofGetElapsedTimeMillis();
+            if (now - lastReconnectTime > defaultOptions.reconnectInterval) {
+                lastReconnectTime = now;
+                connect( defaultOptions );
+            }
+        }
+    }
+
     //--------------------------------------------------------------
     void Client::threadedFunction(){
         while ( isThreadRunning() ){
@@ -237,9 +270,13 @@ namespace ofxLibwebsockets {
             if (context != NULL && lwsconnection != NULL){
                 //libwebsocket_callback_on_writable(context,lwsconnection);
                 connection->update();
-                lock();
-                int n = libwebsocket_service(context, waitMillis);
-                unlock();
+                
+                if (lock())
+                {
+                    int n = libwebsocket_service(context, waitMillis);
+                    unlock();
+                }
+                yield();
             } else {
 				stopThread();
 				if ( context != NULL ){

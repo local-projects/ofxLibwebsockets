@@ -9,6 +9,8 @@
 
 namespace ofxLibwebsockets { 
 
+	vector<Reactor *> reactors = vector<Reactor *>();
+
     //--------------------------------------------------------------
     Reactor::Reactor()
     : context(NULL), waitMillis(50){
@@ -40,6 +42,10 @@ namespace ofxLibwebsockets {
     }
 
     //--------------------------------------------------------------
+    void Reactor::setWaitMillis(int millis){
+        waitMillis = millis;
+    }
+    //--------------------------------------------------------------
     void Reactor::close(Connection* const conn){
         if (conn != NULL && conn->ws != NULL){
           // In the current git for the library, libwebsocket_close_and_free_session() has been removed from the public api.
@@ -57,7 +63,12 @@ namespace ofxLibwebsockets {
     void Reactor::exit(){
         if (context != NULL)
         {
-            waitForThread(true);
+            if (isThreadRunning()){
+                // this is the strategy from ofxKinect
+                stopThread();
+                ofSleepMillis(10);
+                waitForThread(false);
+            }
 			// on windows the app does crash if the context is destroyed
 			// while the thread or the library still might hold pointers
 			// better to live with non deleted memory, or?
@@ -210,7 +221,7 @@ namespace ofxLibwebsockets {
                             
                             if ( bytesLeft == 0 && libwebsocket_is_final_fragment( conn->ws )){
                                 // copy into event
-                                args.data.set(largeBinaryMessage.getBinaryBuffer(), largeBinaryMessage.size());
+                                args.data.set(largeBinaryMessage.getData(), largeBinaryMessage.size());
                                 
                                 bFinishedReceiving      = true;
                                 bReceivingLargeMessage  = false;
@@ -295,7 +306,7 @@ namespace ofxLibwebsockets {
         if (ext == "css")
             mimetype = "text/css";
         
-        if (libwebsockets_serve_http_file(context, ws, file.c_str(), mimetype.c_str(), "") < 0){
+        if (libwebsockets_serve_http_file(context, ws, file.c_str(), mimetype.c_str(), "", 0) < 0){
             ofLog( OF_LOG_WARNING, "[ofxLibwebsockets] Failed to send HTTP file "+ file + " for "+ url);
         }
         

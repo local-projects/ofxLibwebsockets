@@ -36,5 +36,4 @@ namespace ofxLibwebsockets {
  ofEvent<ofxLibwebsockets::Event> onClose;
  ofEvent<ofxLibwebsockets::Event> onIdle;
  ofEvent<ofxLibwebsockets::Event> onMessage;
- ofEvent<ofxLibwebsockets::Event> onBroadcast;
  };*/

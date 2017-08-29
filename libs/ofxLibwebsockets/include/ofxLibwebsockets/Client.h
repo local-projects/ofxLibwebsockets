@@ -19,6 +19,8 @@ namespace ofxLibwebsockets {
         string  channel;
         string  protocol;
         int     version;
+        bool    reconnect;
+        int     reconnectInterval;
         
         // advanced: timeout options
         // names are from libwebsockets (ka == keep alive)
@@ -28,20 +30,7 @@ namespace ofxLibwebsockets {
     };
     
     // call this function to set up a vanilla client options object
-    static ClientOptions defaultClientOptions(){
-        ClientOptions opts;
-        opts.host     = "localhost";
-        opts.port     = 80;
-        opts.bUseSSL  = false;
-        opts.channel  = "/";
-        opts.protocol = "NULL";
-        opts.version  = -1;     //use latest version
-        
-        opts.ka_time      = 0;
-        opts.ka_probes    = 0;
-        opts.ka_interval  = 0;
-        return opts;
-    };
+    extern ClientOptions defaultClientOptions();
     
     class Client : public Reactor {
         friend class Protocol;
@@ -49,7 +38,7 @@ namespace ofxLibwebsockets {
         
         Client();
         ~Client();
-        
+
         // Note: the boolean returned here == libwebsockets setup success
         // You will receive an "onOpen" event on successful connect
         // and "onClose" on unsuccessful
@@ -68,10 +57,15 @@ namespace ofxLibwebsockets {
         
         // send anything that has pixels
         template <class T>
-        void sendBinary( T& image );
+        void sendBinary( T& image ){
+            if ( connection != NULL ){
+                int size = image.getWidth() * image.getHeight() * image.getPixels().getNumChannels();
+                connection->sendBinary( (char *) image.getPixels().getData(), size );
+            }
+        }
         
         // send any binary data
-        void sendBinary( ofBuffer buffer );
+        void sendBinary( ofBuffer & buffer );
         void sendBinary( unsigned char * data, int size );
         void sendBinary( char * data, int size );
         
@@ -82,14 +76,17 @@ namespace ofxLibwebsockets {
             ofAddListener( clientProtocol.oncloseEvent, app, &T::onClose);
             ofAddListener( clientProtocol.onidleEvent, app, &T::onIdle);
             ofAddListener( clientProtocol.onmessageEvent, app, &T::onMessage);
-            ofAddListener( clientProtocol.onbroadcastEvent, app, &T::onBroadcast);
         }
         
         // get pointer to libwebsockets connection wrapper
         Connection * getConnection(){
             return connection;
         }
-        
+
+        // Note: you do not need to call this function! It is called
+        // automatically and only used for reconnecting
+        void update(ofEventArgs& args);
+
     protected:
         ClientOptions defaultOptions;
         void onClose( Event& args );
@@ -103,6 +100,9 @@ namespace ofxLibwebsockets {
         
         //wrap protocol
         Protocol clientProtocol;
+
+        bool bShouldReconnect;
+        uint64_t lastReconnectTime;
         
     };
 };
