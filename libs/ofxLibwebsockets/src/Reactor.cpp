@@ -88,13 +88,14 @@ namespace ofxLibwebsockets {
     //--------------------------------------------------------------
     unsigned int
     Reactor::_allow(struct libwebsocket *ws, Protocol* const protocol, const long fd){
-        std::string client_ip(128, 0);
-        std::string client_name(128, 0);
-        
-        libwebsockets_get_peer_addresses(context, ws, libwebsocket_get_socket_fd(ws),
-                                         &client_name[0], client_name.size(),
-                                         &client_ip[0], client_ip.size());
-        return protocol->_allowClient(client_name, client_ip);
+
+		char client_ip_[128];
+		char client_name_[128];
+
+		libwebsockets_get_peer_addresses(context, ws, libwebsocket_get_socket_fd(ws),
+										 client_name_, sizeof(client_name_),
+										 client_ip_, sizeof(client_ip_));
+        return protocol->_allowClient(client_name_, client_ip_);
     }
 
     //--------------------------------------------------------------

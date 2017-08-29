@@ -59,14 +59,16 @@ namespace ofxLibwebsockets {
     //--------------------------------------------------------------
     void Connection::setupAddress(){
         int fd = libwebsocket_get_socket_fd( ws );
-        
-        client_ip.resize(128);
-        client_name.resize(128);
-        
-        libwebsockets_get_peer_addresses(context, ws, fd, &client_name[0], client_name.size(),
-                                         &client_ip[0], client_ip.size());
+
+		char client_ip_[128];
+		char client_name_[128];
+
+		libwebsockets_get_peer_addresses(context, ws, fd, client_name_, sizeof(client_name_),
+										 client_ip_, sizeof(client_ip_));
+		client_name = client_name_;
+		client_ip = client_ip_;
     }
-    
+
     //--------------------------------------------------------------
     void Connection::send(const std::string& message)
     {
