@@ -13,8 +13,8 @@ common:
 	# include search paths, this will be usually parsed from the file system
 	# but if the addon or addon libraries need special search paths they can be
 	# specified here separated by spaces or one per line using +=
-	ADDON_INCLUDES = libs/jsoncpp
-	ADDON_INCLUDES += libs/jsoncpp/json
+	#ADDON_INCLUDES = libs/jsoncpp
+	#ADDON_INCLUDES += libs/jsoncpp/json
 	ADDON_INCLUDES += libs/libwebsockets/include/
 	ADDON_INCLUDES += libs/ofxLibwebsockets/include
 	ADDON_INCLUDES += libs/ofxLibwebsockets/include/ofxLibwebsockets
